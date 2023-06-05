@@ -1,0 +1,55 @@
+version: '3.5'
+services:  
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: project-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ALLOW_ANONYMOUS_LOGIN: yes
+    ports:
+      - 2181:2181
+    networks:
+      - project-network
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: project-kafka
+    ports:
+      - 9092:9092
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      ALLOW_PLAINTEXT_LISTENER: yes
+    depends_on:
+      - zookeeper
+    networks:
+      - project-network
+
+  kafka-setup:
+    image: bitnami/kafka:latest
+    container_name: kafka-setup
+    restart: "no"
+    depends_on:
+      - kafka
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # blocks until kafka is reachable
+      kafka-topics --bootstrap-server project-kafka:9092 --list
+
+      kafka-topics --bootstrap-server project-kafka:9092 --create --if-not-exists --topic source-data --replication-factor 1 --partitions 3
+      "
+    networks:
+      - project-network
+
+  source_data_reader:
+    container_name: source_data_reader
+    build:
+        context: .
+        dockerfile: source_data_reader/Dockerfile.read
+    networks:
+      - project-network
+
+networks:
+  project-network:
+    name: project-network

@@ -1,8 +1,9 @@
 version: '3.5'
+
 services:  
   zookeeper:
     image: bitnami/zookeeper:latest
-    container_name: project-zookeeper
+    container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ALLOW_ANONYMOUS_LOGIN: yes
@@ -13,7 +14,7 @@ services:
 
   kafka:
     image: bitnami/kafka:latest
-    container_name: project-kafka
+    container_name: kafka
     ports:
       - 9092:9092
     environment:
@@ -35,9 +36,10 @@ services:
     command: |
       "
       # blocks until kafka is reachable
-      kafka-topics --bootstrap-server project-kafka:9092 --list
+      kafka-topics --bootstrap-server kafka:9092 --list
 
-      kafka-topics --bootstrap-server project-kafka:9092 --create --if-not-exists --topic source-data --replication-factor 1 --partitions 3
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic source-data --replication-factor 3 --partitions 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic output-data --replication-factor 3 --partitions 1
       "
     networks:
       - project-network
@@ -47,8 +49,58 @@ services:
     build:
         context: .
         dockerfile: source_data_reader/Dockerfile.read
+    depends_on:
+      - kafka
     networks:
       - project-network
+  
+  spark:
+    image: docker.io/bitnami/spark:3
+    container_name: spark-master
+    networks:
+      - project-network
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    ports:
+      - '8080:8080'
+
+  spark-worker:
+    image: docker.io/bitnami/spark:3
+    container_name: spark-worker
+    networks:
+      - project-network
+    depends_on: 
+      cassandra-node:
+        condition: service_healthy
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+  
+  cassandra-node:
+    image: cassandra:latest
+    container_name: cassandra-node
+    ports:
+      - "9042:9042"
+    networks:
+      - project-network
+    volumes:
+      - ./cql_scripts/ddl.cql:/ddl.cql
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-f", "ddl.cql" ]
+      interval: 60s
+      retries: 5
+      start_period: 20s
+      timeout: 10s
 
 networks:
   project-network:

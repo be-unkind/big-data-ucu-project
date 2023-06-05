@@ -15,7 +15,7 @@ def read_stream(stream_url, producer):
 
 
 if __name__ == "__main__":
-    producer = KafkaProducer(bootstrap_servers=['project-kafka:9092'], value_serializer=lambda x: json.dumps(x).encode('utf-8'))
+    producer = KafkaProducer(bootstrap_servers=['kafka:9092'], value_serializer=lambda x: json.dumps(x).encode('utf-8'))
     stream_url = 'https://stream.wikimedia.org/v2/stream/page-create'
 
     read_stream(stream_url, producer)

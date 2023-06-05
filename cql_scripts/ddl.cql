@@ -4,5 +4,5 @@ USE project;
 
 CREATE TABLE domains (
     domain text, 
-    PRIMARY KEY domain
+    PRIMARY KEY (domain)
 );

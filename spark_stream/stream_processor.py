@@ -49,11 +49,13 @@ schema = StructType([
     ]), True)
 ])
 
+
 spark = SparkSession \
         .builder \
         .appName("Spark Kafka Streaming") \
         .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0") \
         .config("spark.sql.streaming.checkpointLocation", "/opt/app/spark-checkpoint") \
+        .config("spark.cassandra.connection.host", "cassandra-node") \
         .getOrCreate()
 
 
@@ -71,8 +73,7 @@ df = spark \
     .option("failOnDataLoss", "false")\
     .load()
 
-df = df.withColumn("value", decode(col("value"), "utf-8"))
-df = df.withColumn("value", from_json(col("value"), schema))
+df = df.selectExpr("CAST(value AS STRING)").withColumn("value", from_json(col("value"), schema))
 
 df = df.select(col("value.meta.domain").alias("domain"), \
                col("value.performer.user_id").alias("user_id"), \
@@ -80,22 +81,29 @@ df = df.select(col("value.meta.domain").alias("domain"), \
                col("value.performer.user_is_bot").alias("user_is_bot"), \
                col("value.page_id").alias("page_id"), \
                col("value.page_title").alias("page_title"), \
-               col("value.rev_timestamp").alias("rev_timestamp"))
+               col("value.rev_timestamp").alias("rev_timestamp"), \
+               col("value").alias("value"))
 
-print("COLUMNS: ", df.dtypes)
+# df.select(col("domain").alias("value")).writeStream \
+#     .format("kafka") \
+#     .option("kafka.bootstrap.servers", kafka_bootstrap_servers) \
+#     .option("topic", output_topic_name) \
+#     .option("checkpointLocation", "/opt/app/kafka_checkpoint")\
+#     .start().awaitTermination()
 
-exit(0)
-
-df.select(col("value").alias("value")).writeStream \
-    .format("kafka") \
-    .option("kafka.bootstrap.servers", kafka_bootstrap_servers) \
-    .option("topic", output_topic_name) \
-    .option("checkpointLocation", "/opt/app/kafka_checkpoint")\
-    .start().awaitTermination()
+query = df.select(col("page_title").alias("domain")).writeStream\
+ .option("checkpointLocation", '/opt/app/cassandra_checkpoint')\
+ .format("org.apache.spark.sql.cassandra")\
+ .option("keyspace", "project")\
+ .option("table", "domains")\
+ .start().awaitTermination()
 
 # docker run --rm -it --network project-network --name spark-submit -v /home/yromanu/UCU/third_year/second_term/big-data-ucu-project/spark_stream:/opt/app bitnami/spark:3 /bin/bash
 
 # spark-submit --conf spark.jars.ivy=/opt/app --packages "org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0" --master spark://spark-master:7077 --deploy-mode client stream_processor.py
+
+# Start with cassandra:
+# spark-submit --conf spark.jars.ivy=/opt/app --packages "org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0,com.datastax.spark:spark-cassandra-connector_2.12:3.1.0" --master spark://spark-master:7077 --deploy-mode client stream_processor.py
 
 # kafka producer
 # docker run -it --rm --network project-network -e KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181 bitnami/kafka:latest kafka-console-producer.sh --broker-list kafka:9092 --topic source-data

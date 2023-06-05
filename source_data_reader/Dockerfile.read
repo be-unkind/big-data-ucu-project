@@ -3,7 +3,7 @@ FROM python:3.9
 WORKDIR /source_data_reader
 
 RUN pip install kafka-python
-RUN pip install requests
+RUN pip install sseclient
 
 COPY source_data_reader/read_data.py /source_data_reader/
 

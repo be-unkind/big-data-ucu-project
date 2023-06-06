@@ -6,3 +6,8 @@ CREATE TABLE domains (
     domain text, 
     PRIMARY KEY (domain)
 );
+
+CREATE TABLE page_titles (
+    page_title text, 
+    PRIMARY KEY (page_title)
+);

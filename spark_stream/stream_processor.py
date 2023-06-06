@@ -91,12 +91,34 @@ df = df.select(col("value.meta.domain").alias("domain"), \
 #     .option("checkpointLocation", "/opt/app/kafka_checkpoint")\
 #     .start().awaitTermination()
 
-query = df.select(col("page_title").alias("domain")).writeStream\
- .option("checkpointLocation", '/opt/app/cassandra_checkpoint')\
- .format("org.apache.spark.sql.cassandra")\
- .option("keyspace", "project")\
- .option("table", "domains")\
- .start().awaitTermination()
+# query = df.select(col("page_title").alias("domain")).writeStream\
+#  .option("checkpointLocation", '/opt/app/cassandra_checkpoint')\
+#  .format("org.apache.spark.sql.cassandra")\
+#  .option("keyspace", "project")\
+#  .option("table", "domains")\
+#  .start().awaitTermination()
+
+# Define the write function
+def write_to_cassandra(batch_df, batch_id):
+    batch_df.select(col("page_title").alias("page_title")).write \
+        .format("org.apache.spark.sql.cassandra") \
+        .option("keyspace", "project")\
+        .option("table", "page_titles")\
+        .mode("append") \
+        .save()
+
+    batch_df.select(col("domain").alias("domain")).write \
+        .format("org.apache.spark.sql.cassandra") \
+        .option("keyspace", "project")\
+        .option("table", "domains")\
+        .mode("append") \
+        .save()
+    
+# Write the streaming DataFrame to Cassandra tables
+df.writeStream \
+    .foreachBatch(write_to_cassandra) \
+    .start() \
+    .awaitTermination()
 
 # docker run --rm -it --network project-network --name spark-submit -v /home/yromanu/UCU/third_year/second_term/big-data-ucu-project/spark_stream:/opt/app bitnami/spark:3 /bin/bash
 

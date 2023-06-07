@@ -100,19 +100,35 @@ df = df.select(col("value.meta.domain").alias("domain"), \
 
 # Define the write function
 def write_to_cassandra(batch_df, batch_id):
-    batch_df.select(col("page_title").alias("page_title")).write \
+
+    print(batch_df.columns)
+
+    # domain table
+    domain_df = batch_df.select(col("domain").cast("string").alias("domain"), col("page_id").cast("int").alias("page_id"))
+
+    for field in domain_df.schema.fields:
+        print(field.name +" , "+str(field.dataType))
+
+    domain_df.write \
         .format("org.apache.spark.sql.cassandra") \
-        .option("keyspace", "project")\
-        .option("table", "page_titles")\
+        .option("keyspace", "wiki_data") \
+        .option("table", "domain_table") \
         .mode("append") \
         .save()
 
-    batch_df.select(col("domain").alias("domain")).write \
-        .format("org.apache.spark.sql.cassandra") \
-        .option("keyspace", "project")\
-        .option("table", "domains")\
-        .mode("append") \
-        .save()
+    # batch_df.select(col("page_title").alias("page_title")).write \
+    #     .format("org.apache.spark.sql.cassandra") \
+    #     .option("keyspace", "wiki_data")\
+    #     .option("table", "page_titles")\
+    #     .mode("append") \
+    #     .save()
+
+    # batch_df.select(col("domain").alias("domain")).write \
+    #     .format("org.apache.spark.sql.cassandra") \
+    #     .option("keyspace", "wiki_data")\
+    #     .option("table", "domains")\
+    #     .mode("append") \
+    #     .save()
     
 # Write the streaming DataFrame to Cassandra tables
 df.writeStream \

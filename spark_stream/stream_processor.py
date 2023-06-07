@@ -101,20 +101,37 @@ df = df.select(col("value.meta.domain").alias("domain"), \
 # Define the write function
 def write_to_cassandra(batch_df, batch_id):
 
-    print(batch_df.columns)
-
     # domain table
     domain_df = batch_df.select(col("domain").cast("string").alias("domain"), col("page_id").cast("int").alias("page_id"))
-
-    for field in domain_df.schema.fields:
-        print(field.name +" , "+str(field.dataType))
-
     domain_df.write \
         .format("org.apache.spark.sql.cassandra") \
         .option("keyspace", "wiki_data") \
         .option("table", "domain_table") \
         .mode("append") \
         .save()
+    
+    # user table
+    user_df = batch_df.select(col("user_id").cast("int").alias("user_id"),
+                              col("page_id").cast("int").alias("page_id"),
+                              col("page_title").cast("string").alias("page_title"))
+    user_df.write \
+        .format("org.apache.spark.sql.cassandra") \
+        .option("keyspace", "wiki_data") \
+        .option("table", "user_table") \
+        .mode("append") \
+        .save()    
+    
+    # user time table
+    # user_time_df = batch_df.select(col("user_id").cast("int").alias("user_id"),
+    #                                col("user_text").cast("text").alias("user_text"),
+    #                                col("page_id").cast("int").alias("page_id"),
+    #                                col("rev_timestamp").cast("string").alias("rev_timestamp"))
+    # user_time_df.write \
+    #     .format("org.apache.spark.sql.cassandra") \
+    #     .option("keyspace", "wiki_data") \
+    #     .option("table", "user_table") \
+    #     .mode("append") \
+    #     .save() 
 
     # batch_df.select(col("page_title").alias("page_title")).write \
     #     .format("org.apache.spark.sql.cassandra") \

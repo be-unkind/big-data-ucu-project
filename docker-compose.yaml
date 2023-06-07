@@ -55,7 +55,7 @@ services:
       - project-network
   
   spark:
-    image: docker.io/bitnami/spark:3
+    image: docker.io/bitnami/spark:latest
     container_name: spark-master
     networks:
       - project-network
@@ -69,7 +69,7 @@ services:
       - '8080:8080'
 
   spark-worker:
-    image: docker.io/bitnami/spark:3
+    image: docker.io/bitnami/spark:latest
     container_name: spark-worker
     networks:
       - project-network

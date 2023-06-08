@@ -152,10 +152,23 @@ services:
       - ./cql_scripts/ddl.cql:/ddl.cql
     healthcheck:
       test: [ "CMD", "cqlsh", "-f", "ddl.cql" ]
-      interval: 60s
-      retries: 5
+      interval: 30s
+      retries: 10
       start_period: 20s
       timeout: 10s
+
+  rest-api:
+    container_name: rest-api
+    build:
+        context: .
+        dockerfile: rest_api/Dockerfile.rest
+    depends_on: 
+      cassandra-node:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    networks:
+      - project-network
 
 networks:
   project-network:

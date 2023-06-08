@@ -1,0 +1,14 @@
+FROM python:3.9
+
+WORKDIR /rest_api
+
+RUN pip install --upgrade pip
+
+RUN pip install fastapi
+RUN pip install pandas
+RUN pip install uvicorn
+RUN pip install cassandra-driver
+
+COPY rest_api/rest_api.py /rest_api/
+
+CMD ["python3", "rest_api.py"]

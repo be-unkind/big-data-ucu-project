@@ -33,7 +33,7 @@ CREATE TABLE user_time_table (
     page_id INT,
     rev_timestamp TIMESTAMP,
     page_title TEXT,
-    PRIMARY KEY ((rev_timestamp), user_id)
+    PRIMARY KEY ((rev_timestamp), user_id, user_text)
 );
 
 CREATE TABLE page_table (

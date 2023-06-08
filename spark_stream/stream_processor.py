@@ -121,7 +121,8 @@ def write_to_cassandra(batch_df, batch_id):
     user_time_df = batch_df.select(col("user_id").cast("int").alias("user_id"),
                                    col("user_text").cast("string").alias("user_text"),
                                    col("page_id").cast("int").alias("page_id"),
-                                   col("rev_timestamp").alias("rev_timestamp"))
+                                   col("rev_timestamp").alias("rev_timestamp"),
+                                   col("page_title").cast("string").alias("page_title"))
     user_time_df = user_time_df.filter(user_time_df.user_id.isNotNull())
 
     if user_df.isEmpty():
@@ -145,34 +146,17 @@ def write_to_cassandra(batch_df, batch_id):
         .save() 
     
     # page stats table
-    pages_stats_df = batch_df.select(col("rev_timestamp").alias("rev_timestamp"),
+    page_time_df = batch_df.select(col("rev_timestamp").alias("rev_timestamp"),
                                      col("domain").cast("string").alias("domain"),
                                      col("page_id").cast("int").alias("page_id"),
                                      col("user_is_bot").cast("boolean").alias("user_is_bot"))
 
-    pages_stats_df.write \
+    page_time_df.write \
         .format("org.apache.spark.sql.cassandra") \
         .option("keyspace", "wiki_data") \
-        .option("table", "pages_stats") \
+        .option("table", "page_time_table") \
         .mode("append") \
         .save() 
-    
-    # users stats
-    users_stats_df = batch_df.select(col("rev_timestamp").alias("rev_timestamp"),
-                                     col("user_id").cast("int").alias("user_id"),
-                                     col("user_text").cast("string").alias("user_text"),
-                                     col("page_id").cast("int").alias("page_id"))
-    users_stats_df = users_stats_df.filter(users_stats_df.user_id.isNotNull())
-
-    if user_df.isEmpty():
-        print("No valid rows to write to Cassandra.")
-    else:
-        users_stats_df.write \
-            .format("org.apache.spark.sql.cassandra") \
-            .option("keyspace", "wiki_data") \
-            .option("table", "user_stats") \
-            .mode("append") \
-            .save() 
 
 
 # Write the streaming DataFrame to Cassandra tables

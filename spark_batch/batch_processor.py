@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 # Create a SparkSession
 spark = SparkSession.builder \
-    .appName("CassandraReadExample") \
+    .appName("Spark Batch Processing") \
     .config("spark.cassandra.connection.host", "cassandra-node") \
     .getOrCreate()
 
@@ -25,9 +25,8 @@ page_time_df = spark.read \
     .option("table", "page_time_table") \
     .option("keyspace", "wiki_data") \
     .load() \
-    .filter(hour("rev_timestamp") == start_hour+1)
-    # .filter(hour("rev_timestamp") == start_hour)
-
+    .filter(hour("rev_timestamp") == start_hour)
+    # .filter(hour("rev_timestamp") == start_hour+1)
 
 domain_stats_df = page_time_df.groupBy("domain").agg(count("page_id").alias("created_pages"))
 
@@ -55,8 +54,8 @@ page_bot_time_df = spark.read \
     .option("table", "page_time_table") \
     .option("keyspace", "wiki_data") \
     .load() \
-    .filter((hour("rev_timestamp") >= start_hour) & (hour("rev_timestamp") <= end_hour) & (col("user_is_bot") == True))
-    # .filter((hour("rev_timestamp") >= start_hour) & (hour("rev_timestamp") < end_hour) & (col("user_is_bot") == True))
+    .filter((hour("rev_timestamp") >= start_hour) & (hour("rev_timestamp") < end_hour) & (col("user_is_bot") == True))
+    # .filter((hour("rev_timestamp") >= start_hour) & (hour("rev_timestamp") <= end_hour) & (col("user_is_bot") == True))
 
 domain_bot_stats_df = page_bot_time_df.groupBy("domain").agg(count("page_id").alias("created_pages"))
 
@@ -80,8 +79,8 @@ user_time_df = spark.read \
     .option("table", "user_time_table") \
     .option("keyspace", "wiki_data") \
     .load() \
-    .filter((hour("rev_timestamp") >= start_hour) & (hour("rev_timestamp") <= end_hour))
-    # .filter((hour("rev_timestamp") >= start_hour) & (hour("rev_timestamp") < end_hour))
+    .filter((hour("rev_timestamp") >= start_hour) & (hour("rev_timestamp") < end_hour))
+    # .filter((hour("rev_timestamp") >= start_hour) & (hour("rev_timestamp") <= end_hour))
 
 user_stats_df = user_time_df.groupBy("user_id").agg(first("user_text").alias("user_name"),
                                                     count("page_id").cast("int").alias("created_pages"),
@@ -95,16 +94,9 @@ user_stats_df = user_stats_df.withColumn("end_hour", lit(end_time))
 user_stats_df = user_stats_df.groupBy(["start_hour", "end_hour"]) \
                              .agg(collect_list(struct("user_name", "user_id", "created_pages", "page_titles")).alias("statistics"))
 
-user_stats_df.show()
 user_stats_df.write \
         .format("org.apache.spark.sql.cassandra") \
         .option("keyspace", "wiki_data") \
         .option("table", "user_stats") \
         .mode("append") \
         .save() 
-
-# Connect to container
-# docker exec -it spark-batch-submit /bin/bash
-
-# Start with cassandra:
-# spark-submit --conf spark.jars.ivy=/opt/app --packages "org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0,com.datastax.spark:spark-cassandra-connector_2.12:3.1.0" --master spark://spark-batch-master:7077 --deploy-mode client batch_processor.py

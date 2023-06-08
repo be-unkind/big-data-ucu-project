@@ -52,7 +52,7 @@ schema = StructType([
 
 spark = SparkSession \
         .builder \
-        .appName("Spark Kafka Streaming") \
+        .appName("Spark Streaming Processing") \
         .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0") \
         .config("spark.sql.streaming.checkpointLocation", "/opt/app/spark-checkpoint") \
         .config("spark.cassandra.connection.host", "cassandra-node") \

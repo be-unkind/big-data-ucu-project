@@ -140,6 +140,7 @@ services:
         condition: service_healthy
     volumes:
       - ./spark_batch:/opt/app
+    command: python /opt/app/periodic_script.py
 
   cassandra-node:
     image: cassandra:latest

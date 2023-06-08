@@ -28,3 +28,19 @@ CREATE TABLE page_table (
     page_title TEXT,
     PRIMARY KEY (page_id)
 );
+
+CREATE TABLE pages_stats (
+    rev_timestamp TIMESTAMP,
+    domain TEXT,
+    page_id INT,
+    user_is_bot BOOLEAN,
+    PRIMARY KEY ((rev_timestamp), page_id)
+);
+
+CREATE TABLE user_stats (
+    rev_timestamp TIMESTAMP,
+    user_id INT,
+    user_text TEXT,
+    page_id INT,
+    PRIMARY KEY ((rev_timestamp), user_id)
+);

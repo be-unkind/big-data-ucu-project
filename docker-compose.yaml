@@ -54,9 +54,9 @@ services:
     networks:
       - project-network
   
-  spark:
+  spark-streaming:
     image: docker.io/bitnami/spark:latest
-    container_name: spark-master
+    container_name: spark-streaming-master
     networks:
       - project-network
     environment:
@@ -68,9 +68,9 @@ services:
     ports:
       - '8080:8080'
 
-  spark-worker:
+  spark-streaming-worker:
     image: docker.io/bitnami/spark:latest
-    container_name: spark-worker
+    container_name: spark-streaming-worker
     networks:
       - project-network
     depends_on: 
@@ -78,7 +78,7 @@ services:
         condition: service_healthy
     environment:
       - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_MASTER_URL=spark://spark-streaming:7077
       - SPARK_WORKER_MEMORY=1G
       - SPARK_WORKER_CORES=1
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
@@ -86,6 +86,61 @@ services:
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
   
+  spark-streaming-submit:
+    image: docker.io/bitnami/spark:latest
+    container_name: spark-streaming-submit
+    networks:
+      - project-network
+    depends_on: 
+      cassandra-node:
+        condition: service_healthy
+    volumes:
+      - ./spark_stream:/opt/app
+    command: spark-submit --conf spark.jars.ivy=/opt/app --packages "org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0,com.datastax.spark:spark-cassandra-connector_2.12:3.1.0" --master spark://spark-streaming-master:7077 --deploy-mode client /opt/app/stream_processor.py
+  
+  spark-batch:
+    image: docker.io/bitnami/spark:latest
+    container_name: spark-batch-master
+    networks:
+      - project-network
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    ports:
+      - '4040:8080'
+
+  spark-batch-worker:
+    image: docker.io/bitnami/spark:latest
+    container_name: spark-batch-worker
+    networks:
+      - project-network
+    depends_on: 
+      cassandra-node:
+        condition: service_healthy
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-batch:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+  
+  spark-batch-submit:
+    image: docker.io/bitnami/spark:latest
+    container_name: spark-batch-submit
+    networks:
+      - project-network
+    depends_on: 
+      cassandra-node:
+        condition: service_healthy
+    volumes:
+      - ./spark_batch:/opt/app
+
   cassandra-node:
     image: cassandra:latest
     container_name: cassandra-node

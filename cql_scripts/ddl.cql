@@ -24,7 +24,7 @@ CREATE TABLE user_table (
     user_id INT,
     page_id INT,
     page_title TEXT,
-    PRIMARY KEY (user_id)
+    PRIMARY KEY ((user_id), page_id)
 );
 
 CREATE TABLE user_time_table (

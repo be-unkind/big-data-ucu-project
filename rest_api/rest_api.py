@@ -26,6 +26,8 @@ def created_pages_statistics():
 
         query = f"SELECT start_hour, end_hour, statistics FROM domain_stats WHERE start_hour = '{start_timestamp}'"
         result = session.execute(query)
+        if len(result) == 0:
+            continue
 
         stats.append([result[0].start_hour, result[0].end_hour, result[0].statistics])
     
